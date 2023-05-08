@@ -12,7 +12,7 @@ enum DeviceStateEvent {
   DSE_None                    = 0,
   DSE_SHTDisconnected         = 1,
   DSE_SHTFaulty               = 1 << 1,
-  DSE_CCSFaulty               = 1 << 2,
+  DSE_GASFaulty               = 1 << 2,
   DSE_DisplayDisconnected     = 1 << 3,
 
 };
