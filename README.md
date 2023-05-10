@@ -1,18 +1,18 @@
-# Indoor Air quality and temperature monitoring
+# Smart Indoor Farm: Analyzing CO2, Temperature, Humidity and Automated lighting systems
 
 ## Hardware used 
 * ESP32
-* CCS811
+* SCD4x
 * SHT31 
-* 1 channel 5v SSD Relay
+* 2 channel 5v SSD Relay
 
 ### Libraries used:
 
 #### library for ccs811 
-1. Adafruit_CCS811 https://github.com/adafruit/Adafruit_CCS811
+1. Sparkfun_SCD4x https://github.com/sparkfun/SparkFun_SCD4x_Arduino_Library
 
 #### library for Sht3x
-1. Adafruit_SHT31.h 1.1.6 by adafruit <https://github.com/adafruit/Adafruit_SHT31>
+1. Adafruit_SHT31 2.2.0 https://github.com/adafruit/Adafruit_SHT31
 
 #### library used for Json
 1. Arduino Json 5.5.0 Benoit Blenchon <https://github.com/bblanchon/ArduinoJson>
@@ -24,11 +24,3 @@
 1. ESPAsyncWebserver Me No Dev https://github.com/me-no-dev/ESPAsyncWebServer
 2. dependency for ESP8266 ESPAsyncTCP Me No Dev https://github.com/me-no-dev/ESPAsyncTCP
 3. dependency for ESP32 AsyncTCP Me No Dev https://github.com/me-no-dev/AsyncTCP
-
-#### library used for ESPNow
-1. ESP Now ESP32
-
-
-
-
-# SmartIndoorFarm

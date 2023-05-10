@@ -9,22 +9,21 @@
 #include <esp_wifi.h>
 #include "oledState.h"
 #include <BytebeamArduino.h>
+#include "SparkFun_SCD4x_Arduino_Library.h"
+
+SCD4x scd_sensor;
 
 DeviceState state;
 DeviceState &deviceState = state;
 ESPCaptivePortal captivePortal(deviceState);
 
 // sntp credentials
-const long  gmtOffset_sec = 19800;
-const int   daylightOffset_sec = 3600;
-const char* ntpServer = "pool.ntp.org";
-
-// on board led pin number
-#define BOARD_LED 2
+const long gmtOffset_sec = 19800;
+const int daylightOffset_sec = 3600;
+const char *ntpServer = "pool.ntp.org";
 
 // led state variable
 int ledState = 0;
-
 
 void setup()
 {
@@ -36,10 +35,13 @@ void setup()
     DEBUG_PRINTLN("Problem loading EEPROM");
   }
 
-  if (!SPIFFS.begin(true)) {
+  if (!SPIFFS.begin(true))
+  {
     Serial.println("spiffs mount failed");
     return;
-  } else {
+  }
+  else
+  {
     Serial.println("spiffs mount success");
   }
 
@@ -57,9 +59,11 @@ void setup()
   clearDisplay();
 #endif
   DEBUG_PRINTF("The reset reason is %d\n", (int)rtc_get_reset_reason(0));
-  if ( ((int)rtc_get_reset_reason(0) == 12) || ((int)rtc_get_reset_reason(0) == 1))  { // =  SW_CPU_RESET
-    RSTATE.isPortalActive  = true;
-    if (!APConnection(AP_MODE_SSID)) {
+  if (((int)rtc_get_reset_reason(0) == 12) || ((int)rtc_get_reset_reason(0) == 1))
+  { // =  SW_CPU_RESET
+    RSTATE.isPortalActive = true;
+    if (!APConnection(AP_MODE_SSID))
+    {
       DEBUG_PRINTLN("Error Setting Up AP Connection");
       return;
     }
@@ -70,28 +74,26 @@ void setup()
   }
 
   shtInit();
-  ccsInit();
-
-
+  scdInit(&scd_sensor);
 }
 
 // function for ToggleLED action
-int toggleLed(char* args, char* actionId) {
+int toggleLight(char *args, char *actionId)
+{
   Serial.printf("*** args : %s , actionId : %s ***\n", args, actionId);
-  if(RSTATE.isBlindsOpen ? Serial.println("Blinds are open"): Serial.println("Blinds are closed"));
-  RSTATE.isBlindsOpen = !RSTATE.isBlindsOpen;
-  
+  if (RSTATE.isLightOn ? Serial.println("Lights are On") : Serial.println("Lights are off"));
+  RSTATE.isLightOn = !RSTATE.isLightOn;
+  toggleRelay();
   Bytebeam.publishActionCompleted(actionId);
   return 0;
 }
 
-// function to setup the predefined led 
-void setupLED() {
-  pinMode(BOARD_LED, OUTPUT);
-  digitalWrite(BOARD_LED, ledState);
+// function to setup the predefined led
+void toggleRelay()
+{
+  pinMode(RELAY_PIN, OUTPUT);
+  digitalWrite(RELAY_PIN, RSTATE.isLightOn);
 }
-
-
 
 void loop()
 {
@@ -101,36 +103,47 @@ void loop()
     {
       DEBUG_PRINTLN("Error connecting to WiFi, Trying again");
     }
-    if(WiFi.isConnected() && !RSTATE.isBytebeamBegin){
-        syncTimeFromNtp();
-         Bytebeam.begin();
-         Bytebeam.addActionHandler(toggleLed, "toggle_blind");
-         RSTATE.isBytebeamBegin = true;
+    if (WiFi.isConnected() && !RSTATE.isBytebeamBegin)
+    {
+      syncTimeFromNtp();
+      // begin the bytebeam client
+      if (!Bytebeam.begin())
+      {
+        Serial.println("Bytebeam Client Initialization Failed.");
       }
+      else
+      {
+        Serial.println("Bytebeam Client is Initialized Successfully.");
+      }
+      Bytebeam.addActionHandler(toggleLight, "toggle_light");
+      RSTATE.isBytebeamBegin = true;
+    }
     Bytebeam.loop();
+    readSHT();
+    readSCD(&scd_sensor);
     publishToDeviceShadow();
     delay(2000);
-}
-
-  
+  }
 
   if (millis() - RSTATE.startPortal >= SECS_PORTAL_WAIT * MILLI_SECS_MULTIPLIER && RSTATE.isPortalActive)
   {
-    reconnectWiFi((PSTATE.apSSID).c_str(), (PSTATE.apPass).c_str(), 300); 
+    reconnectWiFi((PSTATE.apSSID).c_str(), (PSTATE.apPass).c_str(), 300);
     RSTATE.isPortalActive = false;
   }
 }
 
-unsigned long long getEpochTime() {
-  const long  gmtOffset_sec = 19800;
-  const int   daylightOffset_sec = 3600;
-  const char* ntpServer = "pool.ntp.org";
+unsigned long long getEpochTime()
+{
+  const long gmtOffset_sec = 19800;
+  const int daylightOffset_sec = 3600;
+  const char *ntpServer = "pool.ntp.org";
 
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 
   time_t now;
   struct tm timeinfo;
-  if (!getLocalTime(&timeinfo)) {
+  if (!getLocalTime(&timeinfo))
+  {
     Serial.println("Failed to obtain time");
     return (0);
   }
@@ -140,11 +153,13 @@ unsigned long long getEpochTime() {
   return time;
 }
 
-void syncTimeFromNtp() {
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);                    // set the ntp server and offset
+void syncTimeFromNtp()
+{
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer); // set the ntp server and offset
 
   struct tm timeinfo;
-  if (!getLocalTime(&timeinfo)) {                                              // sync the current time from ntp server
+  if (!getLocalTime(&timeinfo))
+  { // sync the current time from ntp server
     Serial.println("Failed to obtain time");
     return;
   }
@@ -152,9 +167,10 @@ void syncTimeFromNtp() {
   Serial.println();
 }
 
-void publishToDeviceShadow() {
+bool publishToDeviceShadow()
+{
   static int sequence = 0;
-  const char* payload = "";
+  const char *payload = "";
   String deviceShadowStr = "";
   StaticJsonDocument<1024> doc;
 
@@ -168,18 +184,21 @@ void publishToDeviceShadow() {
   DEBUG_PRINTLN(milliseconds);
 
   deviceShadowJsonObj_1["timestamp"] = milliseconds;
-  deviceShadowJsonObj_1["sequence"]  = sequence;
-  if (RSTATE.isBlindsOpen) {
-    deviceShadowJsonObj_1["Status"]    = "Blinds are open";
-  }else{
-    deviceShadowJsonObj_1["Status"]    = "Blinds are closed";
+  deviceShadowJsonObj_1["sequence"] = sequence;
+  if (RSTATE.isLightOn)
+  {
+    deviceShadowJsonObj_1["Status"] = "Lights are on";
   }
-  deviceShadowJsonObj_1["temperature"]  = (random(70, 89))/10;
-  deviceShadowJsonObj_1["humidity"]  = 74;
-  deviceShadowJsonObj_1["carbon"]  = random(400, 450);
+  else
+  {
+    deviceShadowJsonObj_1["Status"] = "Lights are off";
+  }
+  deviceShadowJsonObj_1["temperature"] = RSTATE.temperature;
+  deviceShadowJsonObj_1["humidity"] = RSTATE.humidity;
+  deviceShadowJsonObj_1["carbon"] = RSTATE.carbon;
 
   serializeJson(deviceShadowJsonArray, deviceShadowStr);
   payload = deviceShadowStr.c_str();
   Serial.printf("publishing %s to %s\n", payload, deviceShadowStream);
-  Bytebeam.publishToStream(deviceShadowStream, payload);
+  return Bytebeam.publishToStream(deviceShadowStream, payload);
 }

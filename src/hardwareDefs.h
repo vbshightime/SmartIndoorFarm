@@ -41,11 +41,9 @@ String formApSsidName(String deviceId) {
 #define MISS_POINT_STORE_FILE_NAME      "/missDataPoint.txt"
 
 // wiring configuration
-#define TEMP_SENSOR_PIN     32
 #define BATTERY_VOL_PIN     36
 #define SIG_PIN             26
-#define CONFIG_PIN          25
-#define VOLTAGE_DIV_PIN     5
+#define RELAY_PIN           15
 
 //Display Configuration
 #define SCREEN_WIDTH                            128 // OLED display width, in pixels

@@ -5,10 +5,9 @@
 #include "deviceState.h"
 #include "utils.h"
 #include "hardwareDefs.h"
-#include "Adafruit_CCS811.h"
+#include "SparkFun_SCD4x_Arduino_Library.h" 
 
 
-Adafruit_CCS811 ccs;
 Adafruit_SHT31 sht31(&Wire);
 
 
@@ -39,11 +38,10 @@ bool isSHTWorking()
 
 bool readSHT()
 {
-  auto tempHumid = sht31.readTempHumidity();
+  
+  float temp = sht31.readTemperature();
 
-  float temp = tempHumid.first;
-
-  float humid = tempHumid.second;
+  float humid = sht31.readHumidity();
 
   // NOTE:: is it possible that only one value fails, is it possible to trust the other value in such a case.
   // NOTE:: is nan the only sensor failure scenario
@@ -66,38 +64,31 @@ bool readSHT()
 }
 
 
-bool ccsInit(){
-    if (!ccs.begin())
-    {
-        DEBUG_PRINTLN("Couldn't find CCS");
-        setBit(RSTATE.deviceEvents, DeviceStateEvent::DSE_CCSFaulty);
-        return false;
-    }
-    clearBit(RSTATE.deviceEvents, DeviceStateEvent::DSE_CCSFaulty);
-    return true;
-}
-
-bool isCCSAvailable()
+bool scdInit(SCD4x *scd_sensor)
 {
-  return !testBit(RSTATE.deviceEvents, DeviceStateEvent::DSE_CCSFaulty);
+  if (!scd_sensor->begin())
+  {
+    DEBUG_PRINTLN("Couldn't find SCD");
+    setBit(RSTATE.deviceEvents, DeviceStateEvent::DSE_GASFaulty);
+    return false;
+  }
+  clearBit(RSTATE.deviceEvents, DeviceStateEvent::DSE_GASFaulty);
+  return true;
 }
 
-bool readCCS(){
-    /*unsigned long startTime;
-    startTime = millis();
-    while(!ccs.available()&&millis()-startTime < CCS_WARM_DURATION);
-    if(!ccs.available()){
-        return false;
-        DEBUG_PRINTLN("CCS not available");
-    } 
-     if(!ccs.readData()){
-        uint16_t co2Value = ccs.geteCO2();
-        DEBUG_PRINTF("Co2 value %u\n", (unsigned)co2Value);
-        RSTATE.carbon = co2Value; 
-        }*/
-    RSTATE.carbon = random(900,1200);
+bool isSCDAvailable(){
+    return !testBit(RSTATE.deviceEvents, DeviceStateEvent::DSE_GASFaulty);  
+}
+
+bool readSCD(SCD4x *scd_sensor){
+  if (scd_sensor->readMeasurement()) // readMeasurement will return true when fresh data is available
+  { 
+    RSTATE.carbon = scd_sensor->getCO2();
     return true;
-    }
+  }
+  DEBUG_PRINTLN("Failed to get CO2 Values");
+  return false;
+}
 
 
 

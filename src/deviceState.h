@@ -12,7 +12,7 @@ enum DeviceStateEvent {
   DSE_None                    = 0,
   DSE_SHTDisconnected         = 1,
   DSE_SHTFaulty               = 1 << 1,
-  DSE_CCSFaulty               = 1 << 2,
+  DSE_GASFaulty               = 1 << 2,
   DSE_DisplayDisconnected     = 1 << 3,
 
 };
@@ -47,7 +47,7 @@ class RunTimeState {
       humidity(INVALID_HUMIDITY_READING),
       carbon(INVALID_GAS_READING),
       isBytebeamBegin(false),
-      isBlindsOpen(false)
+      isLightOn(0)
      {
 
     }
@@ -64,7 +64,7 @@ class RunTimeState {
     float humidity;
     uint16_t carbon;
     bool isBytebeamBegin;
-    bool isBlindsOpen;
+    uint8_t isLightOn;
   
 };
 
