@@ -8,7 +8,7 @@
 
 ### Libraries used:
 
-#### library for ccs811 
+#### library for SCD4x 
 1. Sparkfun_SCD4x https://github.com/sparkfun/SparkFun_SCD4x_Arduino_Library
 
 #### library for Sht3x
